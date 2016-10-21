@@ -75,7 +75,7 @@ up the credentials for your chosen cloud see the
 [cloud setup page](https://jujucharms.com/docs/devel/getting-started-general#2.-choose-a-cloud).
 
 After configuration is complete test your setup with a `juju bootstrap`
-command: `juju bootstrap $controllername $cloudtype` you are ready to launch 
+command: `juju bootstrap $cloudtype $controllername` you are ready to launch 
 the Kubernetes cluster.
 
 ## Launch a Kubernetes cluster
