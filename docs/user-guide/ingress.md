@@ -1,4 +1,7 @@
 ---
+assignees:
+- bprashanth
+
 ---
 
 * TOC
@@ -41,26 +44,9 @@ It can be configured to give services externally-reachable urls, load balance tr
 
 Before you start using the Ingress resource, there are a few things you should understand. The Ingress is a beta resource, not available in any Kubernetes release prior to 1.1. You need an Ingress controller to satisfy an Ingress, simply creating the resource will have no effect.
 
-On GCE/GKE there should be a [L7 cluster addon](https://github.com/kubernetes/contrib/blob/master/ingress/controllers/gce/README.md), deployed into the `kube-system` namespace:
+GCE/GKE deploys an ingress controller on the master. You can deploy any number of custom ingress controllers in a pod. You must annotate each ingress with the appropriate class, as indicated [here](https://github.com/kubernetes/contrib/tree/master/ingress/controllers/nginx#running-multiple-ingress-controllers) and [here](https://github.com/kubernetes/contrib/blob/master/ingress/controllers/gce/BETA_LIMITATIONS.md#disabling-glbc).
 
-```shell
-$ kubectl get pods --namespace=kube-system -l name=glbc
-NAME                            READY     STATUS    RESTARTS   AGE
-l7-lb-controller-v0.6.0-chnan   2/2       Running   0          1d
-```
-
-Make sure you review the [beta limitations](https://github.com/kubernetes/contrib/tree/master/ingress/controllers/gce/BETA_LIMITATIONS.md) of this controller. In particular, you need to create a single firewall-rule on your cloudprovider, to allow health checks. On GKE this would be:
-
-```shell
-$ export TAG=$(basename `gcloud container clusters describe ${CLUSTER_NAME} --zone ${ZONE} | grep gke | awk '{print $2}'` | sed -e s/group/node/)
-$ export NODE_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services echoheaders)
-$ gcloud compute firewall-rules create allow-130-211-0-0-22 \
-  --source-ranges 130.211.0.0/22 \
-  --target-tags $TAG \
-  --allow tcp:$NODE_PORT
-```
-
-In environments other than GCE/GKE, you need to [deploy a controller](https://github.com/kubernetes/contrib/tree/master/ingress/controllers) as a pod.
+Make sure you review the [beta limitations](https://github.com/kubernetes/contrib/tree/master/ingress/controllers/gce/BETA_LIMITATIONS.md) of this controller. In environments other than GCE/GKE, you need to [deploy a controller](https://github.com/kubernetes/contrib/tree/master/ingress/controllers) as a pod.
 
 ## The Ingress Resource
 
@@ -97,6 +83,10 @@ __Global Parameters__: For the sake of simplicity the example Ingress has no glo
 
 In order for the Ingress resource to work, the cluster must have an Ingress controller running. This is unlike other types of controllers, which typically run as part of the `kube-controller-manager` binary, and which are typically started automatically as part of cluster creation. You need to choose the ingress controller implementation that is the best fit for your cluster, or implement one.  Examples and instructions can be found [here](https://github.com/kubernetes/contrib/tree/master/ingress/controllers).
 
+## Before you begin
+
+The following document describes a set of cross platform features exposed through the Ingress resource. Ideally, all Ingress controllers should fulfill this specification, but we're not there yet. The docs for the GCE and nginx controllers are [here](https://github.com/kubernetes/contrib/blob/master/ingress/controllers/gce/README.md) and [here](https://github.com/kubernetes/contrib/blob/master/ingress/controllers/nginx/README.md) respectively. **Make sure you review controller specific docs so you understand the caveats of each one**.
+
 ## Types of Ingress
 
 ### Single Service Ingress
@@ -105,7 +95,7 @@ There are existing Kubernetes concepts that allow you to expose a single service
 
 {% include code.html language="yaml" file="ingress.yaml" ghlink="/docs/user-guide/ingress.yaml" %}
 
-If you create it using `kubectl -f` you should see:
+If you create it using `kubectl create -f` you should see:
 
 ```shell
 $ kubectl get ing
@@ -218,17 +208,19 @@ metadata:
   name: no-rules-map
 spec:
   tls:
-    secretName: testsecret
+    - secretName: testsecret
   backend:
     serviceName: s1
     servicePort: 80
 ```
 
+Note that there is a gap between TLS features supported by various Ingress controllers. Please refer to documentation on [nginx](https://github.com/kubernetes/contrib/tree/master/ingress/controllers/nginx#https), [GCE](https://github.com/kubernetes/contrib/tree/master/ingress/controllers/gce#tls), or any other platform specific Ingress controller to understand how TLS works in your environment.
+
 ### Loadbalancing
 
 An Ingress controller is bootstrapped with some loadbalancing policy settings that it applies to all Ingress, such as the loadbalancing algorithm, backend weight scheme etc. More advanced loadbalancing concepts (eg: persistent sessions, dynamic weights) are not yet exposed through the Ingress. You can still get these features through the [service loadbalancer](https://github.com/kubernetes/contrib/tree/master/service-loadbalancer). With time, we plan to distill loadbalancing patterns that are applicable cross platform into the Ingress resource.
 
-It's also worth noting that even though health checks are not exposed directly through the Ingress, there exist parallel concepts in Kubernetes such as [readiness probes](https://github.com/kubernetes/kubernetes/blob/release-1.0/docs/user-guide/production-pods.md#liveness-and-readiness-probes-aka-health-checks) which allow you to achieve the same end result.
+It's also worth noting that even though health checks are not exposed directly through the Ingress, there exist parallel concepts in Kubernetes such as [readiness probes](https://github.com/kubernetes/kubernetes/blob/release-1.0/docs/user-guide/production-pods.md#liveness-and-readiness-probes-aka-health-checks) which allow you to achieve the same end result. Please review the controller specific docs to see how they handle health checks ([nginx](https://github.com/kubernetes/contrib/blob/master/ingress/controllers/nginx/README.md), [GCE](https://github.com/kubernetes/contrib/blob/master/ingress/controllers/gce/README.md#health-checks)).
 
 ## Updating an Ingress
 
@@ -278,6 +270,10 @@ test      -                       178.91.123.132
 ```
 
 You can achieve the same by invoking `kubectl replace -f` on a modified Ingress yaml file.
+
+## Failing across availability zones
+
+Techniques for spreading traffic across failure domains differs between cloud providers. Please check the documentation of the relevant Ingress controller for details. Please refer to the federation [doc](/docs/user-guide/federation/) for details on deploying Ingress in a federated cluster.
 
 ## Future Work
 

@@ -1,4 +1,7 @@
 ---
+assignees:
+- mikedanese
+
 ---
 
 This document is meant to highlight and consolidate in one place configuration best practices that are introduced throughout the user-guide and getting-started documentation and examples. This is a living document so if you think of something that is not on this list but might be useful to others, please don't hesitate to file an issue or submit a PR.
@@ -99,6 +102,9 @@ This document is meant to highlight and consolidate in one place configuration b
   there is an image update to that same tag, the Kubelet won't pull the updated image. You can
   address this by ensuring that any updates to an image bump the image tag as well (e.g.
   `myimage:v2`), and ensuring that your configs point to the correct version.
+
+  **Note:** you should avoid using `:latest` tag when deploying containers in production, because this makes it hard
+  to track which version of the image is running and hard to roll back.
 
 ## Using kubectl
 

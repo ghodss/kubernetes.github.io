@@ -694,7 +694,7 @@ dd
 	width: 100%
 
 	$toc-margin: 15px
-	$header-clearance: 40px
+	$header-clearance: $header-height + 20px
 
 	* + h2, * + h3, * + h4, * + h5, * + h6
 		margin-top: 30px
@@ -706,12 +706,12 @@ dd
 		padding-bottom: 10px
 		border-bottom: 1px solid #cccccc
 
+		// Make sure anchor links aren't hidden by the header
 		&:before
-			content: ''
 			display: block
-			height: 100px
-			margin-top: -100px
-			background-color: red
+			content: " "
+			margin-top: -$header-clearance
+			height: $header-clearance
 			visibility: hidden
 
 	h1
@@ -834,7 +834,7 @@ dd
 
 	td
 		font-size: 0.85em
-	
+
 	#editPageButton
 		position: absolute
 		top: -25px
@@ -873,6 +873,12 @@ dd
 
 	img
 		max-width: 100%
+
+	a.button
+		border-radius: 2px
+
+	a.issue
+		margin-left: 20px
 
 .fixed footer
 	position: fixed
@@ -1125,7 +1131,7 @@ $feature-box-div-margin-bottom: 40px
 
 // Community
 
-#community
+#community, .gridPage
 	&.open-nav, &.flip-nav
 		.logo
 			background-image: url(/images/nav_logo2.svg)
@@ -1164,6 +1170,17 @@ $feature-box-div-margin-bottom: 40px
 				width: auto
 				margin: 10px
 				background-color: $light-grey
+
+		.partner-logos
+			text-align: center
+			max-width: 1200px
+			margin: 0 auto
+
+			img
+				width: auto
+				margin: 10px
+				background-color: $white
+				box-shadow: 0 5px 5px rgba(0,0,0,.24),0 0 5px rgba(0,0,0,.12)
 
 		#calendarWrapper
 			position: relative
@@ -1260,18 +1277,67 @@ $feature-box-div-margin-bottom: 40px
 
 
 #home
-	#talkToUs main
-		padding: 30px 0
+	#talkToUs
+		main
+			padding: 30px 0
+		
+		h5
+			font-size: 20px
 
-	#bigSocial
+
+	#caseStudiesWrapper
+		position: relative
+		text-align: center
+		margin-bottom: 30px
+		
 		div
-			padding-top: 125px
+			position: relative
+			display: inline-block
+			vertical-align: top
+			width: 100%
+			min-height: 230px
+			padding: 125px 10px 15px
+			margin-bottom: 30px
+			background-position: top center
+			background-repeat: no-repeat
 
 		div:nth-child(1)
-			background-image: url(/images/community_logos/viacom_logo.png)
+			background-image: url(/images/community_logos/pearson_logo.png)
 
 		div:nth-child(2)
-			background-image: url(/images/community_logos/ebay_logo.png)
+			background-image: url(/images/community_logos/box_logo.png)
 
 		div:nth-child(3)
+			background-image: url(/images/community_logos/ebay_logo.png)
+
+		div:nth-child(4)
 			background-image: url(/images/community_logos/wikimedia_foundation_logo.png)
+			
+		p
+			font-size: 20px
+			
+		a
+			position: absolute
+			bottom: 0
+			left: 50%
+			transform: translateX(-50%)
+			color: $blue
+			font-weight: 400
+
+	
+	//#bigSocial
+	//	text-align: center
+	//	
+	//	div
+	//		display: inline-block
+	//		float: none
+	//		padding-top: 125px
+	//		width: calc(90%)
+	//		
+	//		a
+	//			margin-top: 15px
+	//			font-size: 18px
+	//
+	//
+	//
+//

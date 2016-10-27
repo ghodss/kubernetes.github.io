@@ -1,4 +1,8 @@
 ---
+assignees:
+- lavalamp
+- mikedanese
+
 ---
 
 
@@ -9,11 +13,11 @@ here](https://github.com/kubernetes/kubernetes.github.io/tree/{{page.docsbranch}
 
 ### Step Zero: Prerequisites
 
-This example assumes that you have forked the repository and [turned up a Kubernetes cluster](/docs/getting-started-guides/):
+This example assumes that you have forked the docs repository and [turned up a Kubernetes cluster](/docs/getting-started-guides/):
 
 ```shell
-$ cd kubernetes
-$ ./cluster/kube-up.sh
+$ git clone -b {{page.docsbranch}} https://github.com/kubernetes/kubernetes.github.io
+$ cd kubernetes.github.io
 ```
 
 ### Step One: Turn up the UX for the demo
@@ -28,7 +32,7 @@ $ kubectl proxy --www=docs/user-guide/update-demo/local/ &
 I0218 15:18:31.623279   67480 proxy.go:36] Starting to serve on localhost:8001
 ```
 
-Now visit the the [demo website](http://localhost:8001/static).  You won't see anything much quite yet.
+Now visit the [demo website](http://localhost:8001/static).  You won't see anything much quite yet.
 
 ### Step Two: Run the replication controller
 
@@ -77,14 +81,7 @@ This first stops the replication controller by turning the target number of repl
 
 ### Step Six: Cleanup
 
-To turn down a Kubernetes cluster:
-
-```shell
-$ ./cluster/kube-down.sh
-```
-
-Kill the proxy running in the background:
-After you are done running this demo make sure to kill it:
+After you are done running this demo make sure to kill the proxy running in the background:
 
 ```shell
 $ jobs

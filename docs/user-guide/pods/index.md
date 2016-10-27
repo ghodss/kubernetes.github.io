@@ -1,4 +1,6 @@
 ---
+assignees:
+
 ---
 
 * TOC
@@ -55,6 +57,11 @@ When something is said to have the same lifetime as a pod, such as a volume,
 that means that it exists as long as that pod (with that UID) exists. If that
 pod is deleted for any reason, even if an identical replacement is created, the
 related thing (e.g. volume) is also destroyed and created anew.
+
+![pod diagram](/images/docs/pod.svg){: style="max-width: 50%" }
+
+*A multi-container pod that contains a file puller and a 
+web server that uses a persistent volume for shared storage between the containers.*
 
 ## Motivation for pods
 
@@ -143,7 +150,9 @@ Pod is exposed as a primitive in order to facilitate:
 * clean composition of Kubelet-level functionality with cluster-level functionality &mdash; Kubelet is effectively the "pod controller"
 * high-availability applications, which will expect pods to be replaced in advance of their termination and certainly in advance of deletion, such as in the case of planned evictions, image prefetching, or live pod migration [#3949](http://issue.k8s.io/3949)
 
-The current best practice for pets is to create a replication controller with `replicas` equal to `1` and a corresponding service. If you find this cumbersome, please comment on [issue #260](http://issue.k8s.io/260).
+There is new first-class support for pet-like pods with the [PetSet](/docs/user-guide/petset/) feature (currently in alpha).
+For prior versions of Kubernetes, best practice for pets is to create a replication controller with `replicas` equal to `1` and a corresponding service. 
+
 
 ## Termination of Pods
 

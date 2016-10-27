@@ -1,10 +1,13 @@
 ---
+assignees:
+- mikedanese
+
 ---
 
 * TOC
 {:toc}
 
-Garbage collection is a helpful function of kubelet that will clean up unreferenced images and unused containers. kubelet will perform garbage collection for containers every minute and garbage collection for images every five minutes.
+Garbage collection is a helpful function of kubelet that will clean up unused images and unused containers. kubelet will perform garbage collection for containers every minute and garbage collection for images every five minutes.
 
 External garbage collection tools are not recommended as these tools can potentially break the behavior of kubelet by removing containers expected to exist.
 
@@ -49,5 +52,5 @@ Containers can potentially be garbage collected before their usefulness has expi
 can contain logs and other data that can be useful for troubleshooting. A sufficiently large value for
 `maximum-dead-containers-per-container` is highly recommended to allow at least 2 dead containers to be
 retained per expected container. A higher value for `maximum-dead-containers` is also recommended for a
-similiar reason.
+similar reason.
 See [this issue](https://github.com/kubernetes/kubernetes/issues/13287) for more details.

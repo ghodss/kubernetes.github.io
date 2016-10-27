@@ -16,8 +16,8 @@ defaults:
     scope:
       path: ""
     values:
-      version: "v1.2"
-      githubbranch: "release-1.2"
+      version: "v1.3"
+      githubbranch: "master"
       docsbranch: "master"
   -
     scope:
@@ -27,3 +27,6 @@ defaults:
       showedit: true
 
 permalink: pretty
+
+gems:
+  - jekyll-redirect-from

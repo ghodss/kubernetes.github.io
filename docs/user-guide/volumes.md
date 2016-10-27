@@ -1,10 +1,16 @@
 ---
+assignees:
+- jsafrane
+- mikedanese
+- saad-ali
+- thockin
+
 ---
 
 On-disk files in a container are ephemeral, which presents some problems for
 non-trivial applications when running in containers.  First, when a container
 crashes kubelet will restart it, but the files will be lost - the
-container starts with a clean slate.  Second, when running containers together
+container starts with a clean state.  Second, when running containers together
 in a `Pod` it is often necessary to share files between those containers.  The
 Kubernetes `Volume` abstraction solves both of these problems.
 
@@ -38,9 +44,9 @@ medium that backs it, and the contents of it are determined by the particular
 volume type used.
 
 To use a volume, a pod specifies what volumes to provide for the pod (the
-[`spec.volumes`](http://kubernetes.io/third_party/swagger-ui/#!/v1/createPod)
+[`spec.volumes`](http://kubernetes.io/kubernetes/third_party/swagger-ui/#!/v1/createPod)
 field) and where to mount those into containers(the
-[`spec.containers.volumeMounts`](http://kubernetes.io/third_party/swagger-ui/#!/v1/createPod)
+[`spec.containers.volumeMounts`](http://kubernetes.io/kubernetes/third_party/swagger-ui/#!/v1/createPod)
 field).
 
 A process in a container sees a filesystem view composed from their Docker
@@ -64,11 +70,15 @@ Kubernetes supports several types of Volumes:
    * `flocker`
    * `glusterfs`
    * `rbd`
+   * `cephfs`
    * `gitRepo`
    * `secret`
    * `persistentVolumeClaim`
    * `downwardAPI`
    * `azureFileVolume`
+   * `azureDisk`
+   * `vsphereVolume`
+   * `Quobyte`
 
 We welcome additional contributions.
 
@@ -98,6 +108,25 @@ While tmpfs is very fast, be aware that unlike disks, tmpfs is cleared on
 machine reboot and any files you write will count against your container's
 memory limit.
 
+#### Example pod
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pd
+spec:
+  containers:
+  - image: gcr.io/google_containers/test-webserver
+    name: test-container
+    volumeMounts:
+    - mountPath: /cache
+      name: cache-volume
+  volumes:
+  - name: cache-volume
+    emptyDir: {}
+```
+
 ### hostPath
 
 A `hostPath` volume mounts a file or directory from the host node's filesystem
@@ -116,6 +145,51 @@ Watch out when using this type of volume, because:
   behave differently on different nodes due to different files on the nodes
 * when Kubernetes adds resource-aware scheduling, as is planned, it will not be
   able to account for resources used by a `hostPath`
+* the directories created on the underlying hosts are only writable by root. You
+  either need to run your process as root in a
+  [privileged container](/docs/user-guide/security-context) or modify the file
+  permissions on the host to be able to write to a `hostPath` volume
+
+#### Example pod
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pd
+spec:
+  containers:
+  - image: gcr.io/google_containers/test-webserver
+    name: test-container
+    volumeMounts:
+    - mountPath: /test-pd
+      name: test-volume
+  volumes:
+  - name: test-volume
+    hostPath:
+      # directory location on host
+      path: /data
+```
+
+#### Example pod
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-hostpath
+spec:
+  containers:
+  - image: myimage
+    name: test-container
+    volumeMounts:
+    - mountPath: /test-hostpath
+      name: test-volume
+  volumes:
+  - name: test-volume
+    hostPath:
+      path: /path/to/my/dir
+```
 
 ### gcePersistentDisk
 
@@ -192,7 +266,7 @@ There are some restrictions when using an awsElasticBlockStore volume:
 
 #### Creating an EBS volume
 
-Before you can use a EBS volume with a pod, you need to create it.
+Before you can use an EBS volume with a pod, you need to create it.
 
 ```shell
 aws ec2 create-volume --availability-zone eu-west-1a --size 10 --volume-type gp2
@@ -235,7 +309,7 @@ writers simultaneously.
 __Important: You must have your own NFS server running with the share exported
 before you can use it__
 
-See the [NFS example](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/nfs/) for more details.
+See the [NFS example](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/volumes/nfs) for more details.
 
 ### iscsi
 
@@ -254,7 +328,7 @@ and then serve it in parallel from as many pods as you need.  Unfortunately,
 iSCSI volumes can only be mounted by a single consumer in read-write mode - no
 simultaneous writers allowed.
 
-See the [iSCSI example](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/iscsi/) for more details.
+See the [iSCSI example](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/volumes/iscsi) for more details.
 
 ### flocker
 
@@ -269,7 +343,7 @@ can be "handed off" between pods as required.
 
 __Important: You must have your own Flocker installation running before you can use it__
 
-See the [Flocker example](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/flocker/) for more details.
+See the [Flocker example](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/volumes/flocker) for more details.
 
 ### glusterfs
 
@@ -284,7 +358,7 @@ simultaneously.
 __Important: You must have your own GlusterFS installation running before you
 can use it__
 
-See the [GlusterFS example](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/glusterfs/) for more details.
+See the [GlusterFS example](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/volumes/glusterfs) for more details.
 
 ### rbd
 
@@ -304,7 +378,21 @@ and then serve it in parallel from as many pods as you need.  Unfortunately,
 RBD volumes can only be mounted by a single consumer in read-write mode - no
 simultaneous writers allowed.
 
-See the [RBD example](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/rbd/) for more details.
+See the [RBD example](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/volumes/rbd) for more details.
+
+### cephfs
+
+A `cephfs` volume allows an existing CephFS volume to be
+mounted into your pod. Unlike `emptyDir`, which is erased when a Pod is
+removed, the contents of a `cephfs` volume are preserved and the volume is merely
+unmounted.  This means that a CephFS volume can be pre-populated with data, and
+that data can be "handed off" between pods.  CephFS can be mounted by multiple
+writers simultaneously.
+
+__Important: You must have your own Ceph server running with the share exported
+before you can use it__
+
+See the [CephFS example](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/volumes/cephfs/) for more details.
 
 ### gitRepo
 
@@ -313,7 +401,7 @@ mounts an empty directory and clones a git repository into it for your pod to
 use.  In the future, such volumes may be moved to an even more decoupled model,
 rather than extending the Kubernetes API for every such use case.
 
-Here is a example for gitRepo volume:
+Here is an example for gitRepo volume:
 
 ```yaml
 apiVersion: v1
@@ -370,18 +458,71 @@ A `FlexVolume` enables users to mount vendor volumes into a pod. It expects vend
 drivers are installed in the volume plugin path on each kubelet node. This is
 an alpha feature and may change in future.
 
-More details are in [here](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/flexvolume/README.md)
+More details are in [here](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/volumes/flexvolume/README.md)
 
 ### AzureFileVolume
 
 A `AzureFileVolume` is used to mount a Microsoft Azure File Volume (SMB 2.1 and 3.0)
 into a Pod.
 
-More details can be found [here](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/azure_file/README.md)
+More details can be found [here](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/volumes/azure_file/README.md)
+
+### AzureDiskVolume
+
+A `AzureDiskVolume` is used to mount a Microsoft Azure [Data Disk](https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-linux-about-disks-vhds/) into a Pod.
+
+More details can be found [here](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/volumes/azure_disk/README.md)
+
+### vsphereVolume
+
+A `vsphereVolume` is used to mount a vSphere VMDK Volume into your Pod.  The contents
+of a volume are preserved when it is unmounted.
+
+__Important: You must create a VMDK volume using `vmware-vdiskmanager -c` or
+the VSphere API before you can use it__
+
+#### Creating a VMDK volume
+
+Before you can use a vSphere volume with a pod, you need to create it.
+
+```shell
+vmware-vdiskmanager -c -t 0 -s 40GB -a lsilogic myDisk.vmdk
+```
+
+#### vSphere VMDK Example configuration
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-vmdk
+spec:
+  containers:
+  - image: gcr.io/google_containers/test-webserver
+    name: test-container
+    volumeMounts:
+    - mountPath: /test-vmdk
+      name: test-volume
+  volumes:
+  - name: test-volume
+    # This VMDK volume must already exist.
+    vsphereVolume:
+      volumePath: myDisk
+      fsType: ext4
+```
+
+### Quobyte
+
+A `Quobyte` volume allows an existing [Quobyte](http://www.quobyte.com) volume to be mounted into your pod.
+
+__Important: You must have your own Quobyte setup running with the volumes created
+before you can use it__
+
+See the [Quobyte example](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/volumes/quobyte) for more details.
 
 ## Resources
 
-The storage media (Disk, SSD, etc) of an `emptyDir` volume is determined by the
+The storage media (Disk, SSD, etc.) of an `emptyDir` volume is determined by the
 medium of the filesystem holding the kubelet root dir (typically
 `/var/lib/kubelet`).  There is no limit on how much space an `emptyDir` or
 `hostPath` volume can consume, and no isolation between containers or between

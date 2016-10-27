@@ -1,4 +1,7 @@
 ---
+assignees:
+- jsafrane
+
 ---
 
 **If you are running clustered Kubernetes and are using static pods to run a pod on every node, you should probably be using a [DaemonSet](/docs/admin/daemons/)!**
@@ -45,7 +48,7 @@ For example, this is how to start a simple web server as a static pod:
     EOF
     ```
 
-2. Configure your kubelet daemon on the node to use this directory by running it with `--config=/etc/kubelet.d/` argument.  On Fedora Fedora 21 with Kubernetes 0.17 edit `/etc/kubernetes/kubelet` to include this line:
+2. Configure your kubelet daemon on the node to use this directory by running it with `--config=/etc/kubelet.d/` argument.  On Fedora edit `/etc/kubernetes/kubelet` to include this line:
 
     ```conf
     KUBELET_ARGS="--cluster-dns=10.254.0.10 --cluster-domain=kube.local --config=/etc/kubelet.d/"
@@ -53,7 +56,7 @@ For example, this is how to start a simple web server as a static pod:
 
     Instructions for other distributions or Kubernetes installations may vary.
 
-3. Restart kubelet. On Fedora 21, this is:
+3. Restart kubelet. On Fedora, this is:
 
     ```shell
     [root@my-node1 ~] $ systemctl restart kubelet
@@ -85,7 +88,7 @@ static-web-my-node1     172.17.0.3                              my-node1/192.168
 
 Labels from the static pod are propagated into the mirror-pod and can be used as usual for filtering.
 
-Notice we cannot delete the pod with the API server (e.g. via [`kubectl`](/docs/user-guide/kubectl/kubectl/) command), kubelet simply won't remove it.
+Notice we cannot delete the pod with the API server (e.g. via [`kubectl`](/docs/user-guide/kubectl/) command), kubelet simply won't remove it.
 
 ```shell
 [joe@my-master ~] $ kubectl delete pod static-web-my-node1

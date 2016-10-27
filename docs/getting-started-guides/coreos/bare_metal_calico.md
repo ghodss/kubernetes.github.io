@@ -1,4 +1,5 @@
 ---
+
 ---
 
 This document describes how to deploy Kubernetes with Calico networking on _bare metal_ CoreOS. For more information on Project Calico, visit [projectcalico.org](http://projectcalico.org) and the [calico-containers repository](https://github.com/projectcalico/calico-containers).
@@ -38,7 +39,7 @@ Download the stable CoreOS bootable ISO from the [CoreOS website](https://coreos
 
 1.  Once you've downloaded the ISO image, burn the ISO to a CD/DVD/USB key and boot from it (if using a virtual machine you can boot directly from the ISO).  Once booted, you should be automatically logged in as the `core` user at the terminal. At this point CoreOS is running from the ISO and it hasn't been installed yet.
 
-2.  *On another machine*, download the the [master cloud-config template](https://raw.githubusercontent.com/projectcalico/calico-cni/k8s-1.1-docs/samples/kubernetes/cloud-config/master-config-template.yaml) and save it as `master-config.yaml`.
+2.  *On another machine*, download the [master cloud-config template](https://raw.githubusercontent.com/projectcalico/calico-cni/k8s-1.1-docs/samples/kubernetes/cloud-config/master-config-template.yaml) and save it as `master-config.yaml`.
 
 3.  Replace the following variables in the `master-config.yaml` file.
 
@@ -168,7 +169,7 @@ kubectl create -f https://raw.githubusercontent.com/projectcalico/calico-cni/k8s
 
 ## Launch other Services With Calico-Kubernetes
 
-At this point, you have a fully functioning cluster running on Kubernetes with a master and two nodes networked with Calico. You can now follow any of the [standard documentation](https://github.com/kubernetes/kubernetes/tree/{{page.version}}/examples/) to set up other services on your cluster.
+At this point, you have a fully functioning cluster running on Kubernetes with a master and two nodes networked with Calico. You can now follow any of the [standard documentation](https://github.com/kubernetes/kubernetes/tree/{{page.version}}.0/examples/) to set up other services on your cluster.
 
 ## Connectivity to outside the cluster
 
@@ -195,3 +196,14 @@ ETCD_AUTHORITY=<master_ip:6666> calicoctl pool show
 In a data center environment, it is recommended to configure Calico to peer with the border routers over BGP. This means that the container IPs will be routable anywhere in the data center, and so NAT is not needed on the nodes (though it may be enabled at the data center edge to allow outbound-only internet connectivity).
 
 The Calico documentation contains more information on how to configure Calico to [peer with existing infrastructure](https://github.com/projectcalico/calico-containers/blob/master/docs/ExternalConnectivity.md).
+
+## Support Level
+
+
+IaaS Provider        | Config. Mgmt | OS     | Networking  | Docs                                              | Conforms | Support Level
+-------------------- | ------------ | ------ | ----------  | ---------------------------------------------     | ---------| ----------------------------
+Bare-metal           | CoreOS       | CoreOS | Calico      | [docs](/docs/getting-started-guides/coreos/bare_metal_calico)               |          | Community ([@caseydavenport](https://github.com/caseydavenport))
+
+
+For support level information on all solutions, see the [Table of solutions](/docs/getting-started-guides/#table-of-solutions) chart.
+

@@ -1,4 +1,8 @@
 ---
+assignees:
+- eparis
+- pmorie
+
 ---
 Many applications require configuration via some combination of config files, command line
 arguments, and environment variables.  These configuration artifacts should be decoupled from image
@@ -91,7 +95,7 @@ content of the file.
 Let's take a look at the ConfigMap that this command created:
 
 ```shell
-$ cluster/kubectl.sh describe configmaps game-config
+$ kubectl describe configmaps game-config
 Name:           game-config
 Namespace:      default
 Labels:         <none>
@@ -147,7 +151,7 @@ following command yields equivalent results to the above example:
 ```shell
 $ kubectl create configmap game-config-2 --from-file=docs/user-guide/configmap/kubectl/game.properties --from-file=docs/user-guide/configmap/kubectl/ui.properties
 
-$ cluster/kubectl.sh get configmaps game-config-2 -o yaml
+$ kubectl get configmaps game-config-2 -o yaml
 ```
 
 ```yaml
@@ -237,7 +241,7 @@ metadata:
 
 ### Use-Case: Consume ConfigMap in environment variables
 
-ConfigMaps can be used to populate the value of command line arguments.  As an example, consider
+ConfigMaps can be used to populate environment variables.  As an example, consider
 the following ConfigMap:
 
 ```yaml
@@ -267,13 +271,13 @@ spec:
         - name: SPECIAL_LEVEL_KEY
           valueFrom:
             configMapKeyRef:
-              name: special-configmap
+              name: special-config
               key: special.how
         - name: SPECIAL_TYPE_KEY
           valueFrom:
             configMapKeyRef:
               name: special-config
-              key: data-1
+              key: special.type
   restartPolicy: Never
 ```
 
@@ -318,13 +322,13 @@ spec:
         - name: SPECIAL_LEVEL_KEY
           valueFrom:
             configMapKeyRef:
-              name: special-configmap
+              name: special-config
               key: special.how
         - name: SPECIAL_TYPE_KEY
           valueFrom:
             configMapKeyRef:
               name: special-config
-              key: data-1
+              key: special.type
   restartPolicy: Never
 ```
 
@@ -362,7 +366,7 @@ spec:
   containers:
     - name: test-container
       image: gcr.io/google_containers/busybox
-      command: [ "/bin/sh", "cat", "/etc/config/special.how" ]
+      command: [ "/bin/sh", "-c", "cat /etc/config/special.how" ]
       volumeMounts:
       - name: config-volume
         mountPath: /etc/config
@@ -390,7 +394,7 @@ spec:
   containers:
     - name: test-container
       image: gcr.io/google_containers/busybox
-      command: [ "/bin/sh", "cat", "/etc/config/path/to/special-key" ]
+      command: [ "/bin/sh","-c","cat /etc/config/path/to/special-key" ]
       volumeMounts:
       - name: config-volume
         mountPath: /etc/config
@@ -410,6 +414,11 @@ When this pod is run, the output will be:
 very
 ```
 
+#### Projecting keys to specific paths and file permissions
+
+You can project keys to specific paths and specific permissions on a per-file
+basis. The [Secrets](/docs/user-guide/secrets/) user guide explains the syntax.
+
 ## Real World Example: Configuring Redis
 
 Let's take a look at a real-world example: configuring redis using ConfigMap.  Say we want to inject
@@ -427,25 +436,23 @@ ConfigMap instance with it:
 ```shell
 $ kubectl create configmap example-redis-config --from-file=docs/user-guide/configmap/redis/redis-config
 
-$ kubectl get configmap redis-config -o yaml
+$ kubectl get configmap example-redis-config -o yaml
 ```
 
 ```yaml
-{
-    "kind": "ConfigMap",
-    "apiVersion": "v1",
-    "metadata": {
-        "name": "example-redis-config",
-        "namespace": "default",
-        "selfLink": "/api/v1/namespaces/default/configmaps/example-redis-config",
-        "uid": "07fd0419-d97b-11e5-b443-68f728db1985",
-        "resourceVersion": "15",
-        "creationTimestamp": "2016-02-22T15:43:34Z"
-    },
-    "data": {
-        "redis-config": "maxmemory 2mb\nmaxmemory-policy allkeys-lru\n"
-    }
-}
+apiVersion: v1
+data:
+  redis-config: |
+    maxmemory 2mb
+    maxmemory-policy allkeys-lru
+kind: ConfigMap
+metadata:
+  creationTimestamp: 2016-03-30T18:14:41Z
+  name: example-redis-config
+  namespace: default
+  resourceVersion: "24686"
+  selfLink: /api/v1/namespaces/default/configmaps/example-redis-config
+  uid: 460a2b6e-f6a3-11e5-8ae5-42010af00002
 ```
 
 Now, let's create a pod that uses this config:

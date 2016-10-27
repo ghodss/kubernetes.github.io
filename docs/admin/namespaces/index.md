@@ -1,4 +1,8 @@
 ---
+assignees:
+- derekwaynecarr
+- janetkuo
+
 ---
 
 A Namespace is a mechanism to partition resources created by users into
@@ -34,12 +38,7 @@ The Namespace provides a unique scope for:
 4.  As a cluster user, I want to interact with resources that are pertinent to my user community in
     isolation of what other user communities are doing on the cluster.
 
-
-## Usage
-
-Look [here](/docs/admin/namespaces/) for an in depth example of namespaces.
-
-### Viewing namespaces
+## Viewing namespaces
 
 You can list the current namespaces in a cluster using:
 
@@ -51,6 +50,7 @@ kube-system   <none>    Active
 ```
 
 Kubernetes starts with two initial namespaces:
+
    * `default` The default namespace for objects with no other namespace
    * `kube-system` The namespace for objects created by the Kubernetes system
 
@@ -92,7 +92,7 @@ A namespace can be in one of two phases:
 
 See the [design doc](https://github.com/kubernetes/kubernetes/blob/{{page.githubbranch}}/docs/design/namespaces.md#phases) for more details.
 
-### Creating a new namespace
+## Creating a new namespace
 
 To create a new namespace, first create a new YAML file called `my-namespace.yaml` with the contents:
 
@@ -103,22 +103,25 @@ metadata:
   name: <insert-namespace-name-here>
 ```
 
-Note that the name of your namespace must be a DNS compatible label.
-
-More information on the `finalizers` field can be found in the namespace [design doc](https://github.com/kubernetes/kubernetes/blob/{{page.githubbranch}}/docs/design/namespaces.md#finalizers).
-
 Then run:
 
 ```shell
 $ kubectl create -f ./my-namespace.yaml
 ```
 
+Note that the name of your namespace must be a DNS compatible label.
+
+There's an optional field `finalizers`, which allows observables to purge resources whenever the namespace is deleted. Keep in mind that if you specify a nonexistent finalizer, the namespace will be created but will get stuck in the `Terminating` state if the user tries to delete it.
+
+More information on `finalizers` can be found in the namespace [design doc](https://github.com/kubernetes/kubernetes/blob/{{page.githubbranch}}/docs/design/namespaces.md#finalizers).
+
+
 ### Working in namespaces
 
 See [Setting the namespace for a request](/docs/user-guide/namespaces/#setting-the-namespace-for-a-request)
 and [Setting the namespace preference](/docs/user-guide/namespaces/#setting-the-namespace-preference).
 
-### Deleting a namespace
+## Deleting a namespace
 
 You can delete a namespace with
 

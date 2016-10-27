@@ -1,4 +1,9 @@
 ---
+assignees:
+- erictune
+- lavalamp
+- thockin
+
 ---
 
 This guide is for people who want to craft a custom Kubernetes cluster.  If you
@@ -52,6 +57,7 @@ on how flags are set on various components.
 
 ### Network
 
+#### Network Connectivity
 Kubernetes has a distinctive [networking model](/docs/admin/networking).
 
 Kubernetes allocates an IP address to each pod.  When creating a cluster, you
@@ -61,23 +67,35 @@ the node is added.  A process in one pod should be able to communicate with
 another pod using the IP of the second pod.  This connectivity can be
 accomplished in two ways:
 
-- Configure network to route Pod IPs
-  - Harder to setup from scratch.
-  - Google Compute Engine ([GCE](/docs/getting-started-guides/gce)) and [AWS](/docs/getting-started-guides/aws) guides use this approach.
-  - Need to make the Pod IPs routable by programming routers, switches, etc.
-  - Can be configured external to Kubernetes, or can implement in the "Routes" interface of a Cloud Provider module.
-  - Generally highest performance.
-- Create an Overlay network
-  - Easier to setup
-  - Traffic is encapsulated, so per-pod IPs are routable.
-  - Examples:
+- **Using an overlay network**
+  - An overlay network obscures the underlying network architecture from the 
+    pod network through traffic encapsulation (e.g vxlan).
+  - Encapsulation reduces performance, though exactly how much depends on your solution.
+- **Without an overlay network**
+  - Configure the underlying network fabric (switches, routers, etc.) to be aware of pod IP addresses.
+  - This does not require the encapsulation provided by an overlay, and so can achieve 
+    better performance.
+
+Which method you choose depends on your environment and requirements.  There are various ways 
+to implement one of the above options: 
+
+- **Use a network plugin which is called by Kubernetes**
+  - Kubernetes supports the [CNI](https://github.com/containernetworking/cni) network plugin interface.
+  - There are a number of solutions which provide plugins for Kubernetes: 
     - [Flannel](https://github.com/coreos/flannel)
+    - [Calico](http://https://github.com/projectcalico/calico-containers)
     - [Weave](http://weave.works/)
     - [Open vSwitch (OVS)](http://openvswitch.org/)
-  - Does not require "Routes" portion of Cloud Provider module.
-  - Reduced performance (exactly how much depends on your solution).
+    - [More found here](/docs/admin/networking#how-to-achieve-this)
+  - You can also write your own.
+- **Compile support directly into Kubernetes**
+  - This can be done by implementing the "Routes" interface of a Cloud Provider module.
+  - The Google Compute Engine ([GCE](/docs/getting-started-guides/gce)) and [AWS](/docs/getting-started-guides/aws) guides use this approach.
+- **Configure the network external to Kubernetes**
+  - This can be done by manually running commands, or through a set of externally maintained scripts.
+  - You have to implement this yourself, but it can give you an extra degree of flexibility.
 
-You need to select an address range for the Pod IPs.
+You will need to select an address range for the Pod IPs. Note that IPv6 is not yet supported for Pod IPs.
 
 - Various approaches:
   - GCE: each project has its own `10.0.0.0/8`.  Carve off a `/16` for each
@@ -85,10 +103,8 @@ You need to select an address range for the Pod IPs.
     Each node gets a further subdivision of this space.
   - AWS: use one VPC for whole organization, carve off a chunk for each
     cluster, or use different VPC for different clusters.
-  - IPv6 is not supported yet.
 - Allocate one CIDR subnet for each node's PodIPs, or a single large CIDR
-  from which smaller CIDRs are automatically allocated to each node (if nodes
-  are dynamically added).
+  from which smaller CIDRs are automatically allocated to each node.
   - You need max-pods-per-node * max-number-of-nodes IPs in total. A `/24` per
     node supports 254 pods per machine and is a common choice.  If IPs are
     scarce, a `/26` (62 pods per machine) or even a `/27` (30 pods) may be sufficient.
@@ -106,9 +122,21 @@ be active at once.  Note that you can grow the end of this range, but you
 cannot move it without disrupting the services and pods that already use it.
 
 Also, you need to pick a static IP for master node.
+
 - Call this `MASTER_IP`.
 - Open any firewalls to allow access to the apiserver ports 80 and/or 443.
 - Enable ipv4 forwarding sysctl, `net.ipv4.ip_forward = 1`
+
+#### Network Policy
+
+Kubernetes enables the definition of fine-grained network policy between Pods 
+using the [NetworkPolicy](/docs/user-guide/networkpolicy) resource.
+
+Not all networking providers support the Kubernetes NetworkPolicy features.
+For clusters which choose to enable NetworkPolicy, the 
+[Calico policy controller addon](https://github.com/kubernetes/kubernetes/tree/master/cluster/addons/calico-policy-controller) 
+can enforce the NetworkPolicy API on top of native cloud-provider networking, 
+Flannel, or Calico networking.
 
 ### Cluster Naming
 
@@ -179,11 +207,11 @@ For etcd, you can:
 
 We recommend that you use the etcd version which is provided in the Kubernetes binary distribution.   The Kubernetes binaries in the release
 were tested extensively with this version of etcd and not with any other version.
-The recommended version number can also be found as the value of `ETCD_VERSION` in `kubernetes/cluster/images/etcd/Makefile`.
+The recommended version number can also be found as the value of `TAG` in `kubernetes/cluster/images/etcd/Makefile`.
 
 The remainder of the document assumes that the image identifiers have been chosen and stored in corresponding env vars.  Examples (replace with latest tags and appropriate registry):
 
-  - `HYPERKUBE_IMAGE==gcr.io/google_containers/hyperkube:$TAG`
+  - `HYPERKUBE_IMAGE=gcr.io/google_containers/hyperkube:$TAG`
   - `ETCD_IMAGE=gcr.io/google_containers/etcd:$ETCD_VERSION`
 
 ### Security Models
@@ -208,11 +236,10 @@ You need to prepare several certs:
 - The kubelets optionally need certs to identify themselves as clients of the master, and when
   serving its own API over HTTPS.
 
-Unless you plan to have a real CA generate your certs, you will need to generate a root cert and use that to sign the master, kubelet, and kubectl certs.
-
-- see function `create-certs` in `cluster/gce/util.sh`
-- see also `cluster/saltbase/salt/generate-cert/make-ca-cert.sh` and
-  `cluster/saltbase/salt/generate-cert/make-cert.sh`
+Unless you plan to have a real CA generate your certs, you will need
+to generate a root cert and use that to sign the master, kubelet, and
+kubectl certs. How to do this is described in the [authentication
+documentation](/docs/admin/authentication/#creating-certificates).
 
 You will end up with the following files (we will use these variables later on)
 
@@ -280,7 +307,7 @@ users:
 clusters:
 - name: local
   cluster:
-    certificate-authority-data: ${CA_CERT_BASE64_ENCODED}
+    certificate-authority: /srv/kubernetes/ca.crt
 contexts:
 - context:
     cluster: local
@@ -320,8 +347,8 @@ as follows before proceeding to configure Docker for Kubernetes.
 
 ```shell
 iptables -t nat -F
-ifconfig docker0 down
-brctl delbr docker0
+ip link set docker0 down
+ip link delete docker0
 ```
 
 The way you configure docker will depend in whether you have chosen the routable-vip or overlay-network approaches for your network.
@@ -368,7 +395,7 @@ Then you need to configure your kubelet with flag:
 
 ### kubelet
 
-All nodes should run kubelet.  See [Selecting Binaries](#selecting-binaries).
+All nodes should run kubelet.  See [Software Binaries](#software-binaries).
 
 Arguments to consider:
 
@@ -394,10 +421,10 @@ kubelet.
 Arguments to consider:
 
   - If following the HTTPS security approach:
-    - `--api-servers=https://$MASTER_IP`
+    - `--master=https://$MASTER_IP`
     - `--kubeconfig=/var/lib/kube-proxy/kubeconfig`
   - Otherwise, if taking the firewall-based security approach
-    - `--api-servers=http://$MASTER_IP`
+    - `--master=http://$MASTER_IP`
 
 ### Networking
 
@@ -420,7 +447,7 @@ because of how this is used later.
 
   1. Set `--configure-cbr0=false` on kubelet and restart.
   1. Create a bridge
-     - `brctl addbr cbr0`.
+     - `ip link add name cbr0 type bridge`.
   1. Set appropriate MTU. NOTE: the actual value of MTU will depend on your network environment
      - `ip link set dev cbr0 mtu 1460`
   1. Add the node's network to the bridge (docker will go on other side of bridge).
@@ -480,16 +507,16 @@ You will need to run one or more instances of etcd.
     by durable storage (RAID, GCE PD)
   - Alternative: run 3 or 5 etcd instances.
     - Log can be written to non-durable storage because storage is replicated.
-    - run a single apiserver which connects to one of the etc nodes.
+    - run a single apiserver which connects to one of the etcd nodes.
 
 See [cluster-troubleshooting](/docs/admin/cluster-troubleshooting) for more discussion on factors affecting cluster
 availability.
 
 To run an etcd instance:
 
-1. copy `cluster/saltbase/salt/etcd/etcd.manifest`
-1. make any modifications needed
-1. start the pod by putting it into the kubelet manifest directory
+1. Copy `cluster/saltbase/salt/etcd/etcd.manifest`
+1. Make any modifications needed
+1. Start the pod by putting it into the kubelet manifest directory
 
 ### Apiserver, Controller Manager, and Scheduler
 
@@ -553,8 +580,10 @@ For each of these components, the steps to start them running are similar:
         ],
         "livenessProbe": {
           "httpGet": {
-            "path": "/healthz",
-            "port": 8080
+            "scheme": "HTTP",
+            "host": "127.0.0.1",
+            "port": 8080,
+            "path": "/healthz"
           },
           "initialDelaySeconds": 15,
           "timeoutSeconds": 15
@@ -600,6 +629,7 @@ If you are following the firewall-only security approach, then use these argumen
 - `--advertise-address=$MASTER_IP`
 
 If you are using the HTTPS approach, then set:
+
 - `--client-ca-file=/srv/kubernetes/ca.crt`
 - `--token-auth-file=/srv/kubernetes/known_tokens.csv`
 - `--basic-auth-file=/srv/kubernetes/basic_auth.csv`
@@ -661,9 +691,10 @@ Complete this template for the scheduler pod:
         ],
         "livenessProbe": {
           "httpGet": {
-            "host" : "127.0.0.1",
-            "path": "/healthz",
-            "port": 10251
+            "scheme": "HTTP",
+            "host": "127.0.0.1",
+            "port": 10251,
+            "path": "/healthz"
           },
           "initialDelaySeconds": 15,
           "timeoutSeconds": 15
@@ -716,9 +747,10 @@ Template for controller manager pod:
         ],
         "livenessProbe": {
           "httpGet": {
+            "scheme": "HTTP",
             "host": "127.0.0.1",
-            "path": "/healthz",
-            "port": 10252
+            "port": 10252,
+            "path": "/healthz"
           },
           "initialDelaySeconds": 15,
           "timeoutSeconds": 15
@@ -813,7 +845,27 @@ Notes for setting up each cluster service are given below:
 
 ### Running validate-cluster
 
-**TODO** explain how to use `cluster/validate-cluster.sh`
+`cluster/validate-cluster.sh` is used by `cluster/kube-up.sh` to determine if
+the cluster start succeeded.
+
+Example usage and output:
+
+```shell
+KUBECTL_PATH=$(which kubectl) NUM_NODES=3 KUBERNETES_PROVIDER=local cluster/validate-cluster.sh
+Found 3 node(s).
+NAME                    STATUS    AGE
+node1.local             Ready     1h
+node2.local             Ready     1h
+node3.local             Ready     1h
+Validate output:
+NAME                 STATUS    MESSAGE              ERROR
+controller-manager   Healthy   ok
+scheduler            Healthy   ok
+etcd-1               Healthy   {"health": "true"}
+etcd-2               Healthy   {"health": "true"}
+etcd-0               Healthy   {"health": "true"}
+Cluster validation succeeded
+```
 
 ### Inspect pods and services
 
@@ -836,4 +888,14 @@ pinging or SSH-ing from one node to another.
 ### Getting Help
 
 If you run into trouble, please see the section on [troubleshooting](/docs/getting-started-guides/gce#troubleshooting), post to the
-[google-containers group](https://groups.google.com/forum/#!forum/google-containers), or come ask questions on [Slack](/docs/troubleshooting#slack).
+[kubernetes-users group](https://groups.google.com/forum/#!forum/kubernetes-users), or come ask questions on [Slack](/docs/troubleshooting#slack).
+
+## Support Level
+
+
+IaaS Provider        | Config. Mgmt | OS     | Networking  | Docs                                              | Conforms | Support Level
+-------------------- | ------------ | ------ | ----------  | ---------------------------------------------     | ---------| ----------------------------
+any                  | any          | any    | any         | [docs](/docs/getting-started-guides/scratch)                                |          | Community ([@erictune](https://github.com/erictune))
+
+
+For support level information on all solutions, see the [Table of solutions](/docs/getting-started-guides/#table-of-solutions) chart.

@@ -1,4 +1,7 @@
 ---
+assignees:
+- thockin
+
 ---
 
 This document describes how to deploy kubernetes on ubuntu nodes, 1 master and 3 nodes involved
@@ -24,8 +27,9 @@ use a CNI plugin instead.
 Internet to download the necessary files, while worker nodes do not.
 3. These guide is tested OK on Ubuntu 14.04 LTS 64bit server, but it can not work with
 Ubuntu 15 which uses systemd instead of upstart.
-4. Dependencies of this guide: etcd-2.2.1, flannel-0.5.5, k8s-1.1.8, may work with higher versions.
+4. Dependencies of this guide: etcd-2.2.1, flannel-0.5.5, k8s-1.2.0, may work with higher versions.
 5. All the remote servers can be ssh logged in without a password by using key authentication.
+6. The remote user on all machines is using /bin/bash as its login shell, and has sudo access.
 
 
 ## Starting a Cluster
@@ -35,18 +39,18 @@ Ubuntu 15 which uses systemd instead of upstart.
 Clone the kubernetes github repo locally
 
 ```shell
-$ git clone https://github.com/kubernetes/kubernetes.git
+$ git clone --depth 1 https://github.com/kubernetes/kubernetes.git
 ```
 
 #### Configure and start the Kubernetes cluster
 
 The startup process will first download all the required binaries automatically.
-By default etcd version is 2.2.1, flannel version is 0.5.5 and k8s version is 1.1.8.
+By default etcd version is 2.2.1, flannel version is 0.5.5 and k8s version is 1.2.0.
 You can customize your etcd version, flannel version, k8s version by changing corresponding variables
 `ETCD_VERSION` , `FLANNEL_VERSION` and `KUBE_VERSION` like following.
 
 ```shell
-$ export KUBE_VERSION=1.1.8
+$ export KUBE_VERSION=1.2.0
 $ export FLANNEL_VERSION=0.5.0
 $ export ETCD_VERSION=2.2.0
 ```
@@ -56,7 +60,7 @@ $ export ETCD_VERSION=2.2.0
 For users who want to bring up a cluster with k8s version v1.1.1, `controller manager` may fail to start
 due to [a known issue](https://github.com/kubernetes/kubernetes/issues/17109). You could raise it
 up manually by using following command on the remote master server. Note that
-you should do this only after `api-server` is up. Moreover this issue is fixed in v1.1.2 and later.
+you should do this only after `api-server` is up. Moreover, this issue is fixed in v1.1.2 and later.
 
 ```shell
 $ sudo service kube-controller-manager start
@@ -80,7 +84,7 @@ First configure the cluster information in cluster/ubuntu/config-default.sh, fol
 ```shell
 export nodes="vcap@10.10.103.250 vcap@10.10.103.162 vcap@10.10.103.223"
 
-export role="ai i i"
+export roles="ai i i"
 
 export NUM_NODES=${NUM_NODES:-3}
 
@@ -92,7 +96,7 @@ export FLANNEL_NET=172.16.0.0/16
 The first variable `nodes` defines all your cluster nodes, master node comes first and
 separated with blank space like `<user_1@ip_1> <user_2@ip_2> <user_3@ip_3> `
 
-Then the `role` variable defines the role of above machine in the same order, "ai" stands for machine
+Then the `roles` variable defines the roles of above machine in the same order, "ai" stands for machine
 acts as both master and node, "a" stands for master, "i" stands for node.
 
 The `NUM_NODES` variable defines the total number of nodes.
@@ -113,7 +117,13 @@ that conflicts with your own private network range.
 The `FLANNEL_NET` variable defines the IP range used for flannel overlay network,
 should not conflict with above `SERVICE_CLUSTER_IP_RANGE`.
 You can optionally provide additional Flannel network configuration
-through `FLANNEL_OTHER_NET_CONFIG`, as explained in `cluster/ubuntu/config-default.sh`.
+through `FLANNEL_BACKEND` and `FLANNEL_OTHER_NET_CONFIG`, as explained in `cluster/ubuntu/config-default.sh`.
+
+The default setting for `ADMISSION_CONTROL` is right for the latest
+release of Kubernetes, but if you choose an earlier release then you
+might want a different setting.  See
+[the admisson control doc](http://kubernetes.io/docs/admin/admission-controllers/#is-there-a-recommended-set-of-plug-ins-to-use)
+for the recommended settings for various releases.
 
 **Note:** When deploying, master needs to be connected to the Internet to download the necessary files.
 If your machines are located in a private network that need proxy setting to connect the Internet,
@@ -280,4 +290,14 @@ You can use the `kubectl` command to check if the newly upgraded kubernetes clus
 To make sure the version of the upgraded cluster is what you expect, you will find these commands helpful.
 
 * upgrade all components or master: `$ kubectl version`. Check the *Server Version*.
-* upgrade node `vcap@10.10.102.223`: `$ ssh -t vcap@10.10.102.223 'cd /opt/bin && sudo ./kubelet --version'`
+* upgrade node `vcap@10.10.102.223`: `$ ssh -t vcap@10.10.102.223 'cd /opt/bin && sudo ./kubelet --version'`* 
+
+## Support Level
+
+
+IaaS Provider        | Config. Mgmt | OS     | Networking  | Docs                                              | Conforms | Support Level
+-------------------- | ------------ | ------ | ----------  | ---------------------------------------------     | ---------| ----------------------------
+Bare-metal           | custom       | Ubuntu | flannel     | [docs](/docs/getting-started-guides/ubuntu)                                 |          | Community ([@resouer](https://github.com/resouer), [@WIZARD-CXY](https://github.com/WIZARD-CXY))
+
+
+For support level information on all solutions, see the [Table of solutions](/docs/getting-started-guides/#table-of-solutions) chart.

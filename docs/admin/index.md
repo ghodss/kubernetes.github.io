@@ -1,4 +1,8 @@
 ---
+assignees:
+- davidopp
+- lavalamp
+
 ---
 
 The cluster admin guide is for anyone creating or administering a Kubernetes cluster.
@@ -75,4 +79,8 @@ project](/docs/admin/salt).
 
 * **Authorization** [authorization](/docs/admin/authorization)
 
-* **Admission Controllers** [admission_controllers](/docs/admin/admission-controllers)
+* **Admission Controllers** [admission controllers](/docs/admin/admission-controllers)
+
+* **Sysctls** [sysctls](/docs/admin/sysctls.md)
+
+* **Audit** [audit](/docs/admin/audit)

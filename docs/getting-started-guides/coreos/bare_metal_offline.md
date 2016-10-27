@@ -1,7 +1,11 @@
 ---
+assignees:
+- erictune
+- thockin
+
 ---
 
-Deploy a CoreOS running Kubernetes environment. This particular guild is made to help those in an OFFLINE system, wither for testing a POC before the real deal, or you are restricted to be totally offline for your applications.
+Deploy a CoreOS running Kubernetes environment. This particular guide is made to help those in an OFFLINE system, wither for testing a POC before the real deal, or you are restricted to be totally offline for your applications.
 
 * TOC
 {:toc}
@@ -19,7 +23,7 @@ Deploy a CoreOS running Kubernetes environment. This particular guild is made to
   * /tftpboot/pxelinux.0/(MAC) -> linked to Linux image config file
 2. Update per install the link for pxelinux
 3. Update the DHCP config to reflect the host needing deployment
-4. Setup nodes to deploy CoreOS creating a etcd cluster.
+4. Setup nodes to deploy CoreOS creating an etcd cluster.
 5. Have no access to the public [etcd discovery tool](https://discovery.etcd.io/).
 6. Installing the CoreOS slaves to become Kubernetes nodes.
 
@@ -94,7 +98,7 @@ Now you should have a working PXELINUX setup to image CoreOS nodes. You can veri
 
 This section describes how to setup the CoreOS images to live alongside a pre-existing PXELINUX environment.
 
-1. Find or create the TFTP root directory that everything will be based off of.
+1. Find or create the TFTP root directory that everything will be based on.
     * For this document we will assume `/tftpboot/` is our root directory.
 2. Once we know and have our tftp root directory we will create a new directory structure for our CoreOS images.
 3. Download the CoreOS PXE files provided by the CoreOS team.
@@ -693,3 +697,12 @@ Kill all pods:
 ```shell
 for i in `kubectl get pods | awk '{print $1}'`; do kubectl delete pod $i; done
 ```
+
+## Support Level
+
+
+IaaS Provider        | Config. Mgmt | OS     | Networking  | Docs                                              | Conforms | Support Level
+-------------------- | ------------ | ------ | ----------  | ---------------------------------------------     | ---------| ----------------------------
+Bare-metal (Offline) | CoreOS       | CoreOS | flannel     | [docs](/docs/getting-started-guides/coreos/bare_metal_offline)              |          | Community ([@jeffbean](https://github.com/jeffbean))
+
+For support level information on all solutions, see the [Table of solutions](/docs/getting-started-guides/#table-of-solutions) chart.

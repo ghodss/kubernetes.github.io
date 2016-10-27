@@ -4,12 +4,21 @@ toc:
 - title: Support
   path: /docs/troubleshooting/
 
+- title: Contributing to the Kubernetes Docs
+  section:
+  - title: Creating a Documentation Pull Request
+    path: /docs/contribute/create-pull-request/
+  - title: Writing a New Topic
+    path: /docs/contribute/write-new-topic/
+  - title: Staging Your Documentation Changes
+    path: /docs/contribute/stage-documentation-changes/
+  - title: Using Page Templates
+    path: /docs/contribute/page-templates/
+
 - title: Troubleshooting
   section:
   - title: Debugging Pods and Replication Controllers
     path: /docs/user-guide/debugging-pods-and-replication-controllers/
-  - title: Web Interface
-    path: /docs/user-guide/ui/
   - title: Application Introspection and Debugging
     path: /docs/user-guide/introspection-and-debugging/
   - title: Retrieving Logs
@@ -42,3 +51,5 @@ toc:
     path: https://github.com/kubernetes/kubernetes/milestones/
   - title: Contributing to Kubernetes Documentation
     path: /editdocs/
+  - title: New Template Instructions
+    path: /docs/templatedemos/

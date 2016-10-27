@@ -3,16 +3,16 @@
 
 ## kubectl config
 
-config modifies kubeconfig files
+Modify kubeconfig files
 
 ### Synopsis
 
 
-config modifies kubeconfig files using subcommands like "kubectl config set current-context my-context"
+Modify kubeconfig files using subcommands like "kubectl config set current-context my-context"
 
 The loading order follows these rules:
 1. If the --kubeconfig flag is set, then only that file is loaded.  The flag may only be set once and no merging takes place.
-2. If $KUBECONFIG environment variable is set, then it is used a list of paths (normal path delimitting rules for your system).  These paths are merged together.  When a value is modified, it is modified in the file that defines the stanza.  When a value is created, it is created in the first file that exists.  If no files in the chain exist, then it creates the last file in the list.
+2. If $KUBECONFIG environment variable is set, then it is used a list of paths (normal path delimitting rules for your system).  These paths are merged.  When a value is modified, it is modified in the file that defines the stanza.  When a value is created, it is created in the first file that exists.  If no files in the chain exist, then it creates the last file in the list.
 3. Otherwise, ${HOME}/.kube/config is used and no merging takes place.
 
 
@@ -23,46 +23,43 @@ kubectl config SUBCOMMAND
 ### Options
 
 ```
-      --kubeconfig="": use a particular kubeconfig file
+      --kubeconfig string   use a particular kubeconfig file
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --alsologtostderr[=false]: log to standard error as well as files
-      --certificate-authority="": Path to a cert. file for the certificate authority.
-      --client-certificate="": Path to a client certificate file for TLS.
-      --client-key="": Path to a client key file for TLS.
-      --cluster="": The name of the kubeconfig cluster to use
-      --context="": The name of the kubeconfig context to use
-      --insecure-skip-tls-verify[=false]: If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure.
-      --log-backtrace-at=:0: when logging hits line file:N, emit a stack trace
-      --log-dir="": If non-empty, write log files in this directory
-      --log-flush-frequency=5s: Maximum number of seconds between log flushes
-      --logtostderr[=true]: log to standard error instead of files
-      --match-server-version[=false]: Require server version to match client version
-      --namespace="": If present, the namespace scope for this CLI request.
-      --password="": Password for basic authentication to the API server.
-  -s, --server="": The address and port of the Kubernetes API server
-      --stderrthreshold=2: logs at or above this threshold go to stderr
-      --token="": Bearer token for authentication to the API server.
-      --user="": The name of the kubeconfig user to use
-      --username="": Username for basic authentication to the API server.
-      --v=0: log level for V logs
-      --vmodule=: comma-separated list of pattern=N settings for file-filtered logging
+      --alsologtostderr value          log to standard error as well as files
+      --as string                      Username to impersonate for the operation
+      --certificate-authority string   Path to a cert. file for the certificate authority
+      --client-certificate string      Path to a client certificate file for TLS
+      --client-key string              Path to a client key file for TLS
+      --cluster string                 The name of the kubeconfig cluster to use
+      --context string                 The name of the kubeconfig context to use
+      --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
+      --log-backtrace-at value         when logging hits line file:N, emit a stack trace (default :0)
+      --log-dir value                  If non-empty, write log files in this directory
+      --logtostderr value              log to standard error instead of files
+      --match-server-version           Require server version to match client version
+  -n, --namespace string               If present, the namespace scope for this CLI request
+      --password string                Password for basic authentication to the API server
+  -s, --server string                  The address and port of the Kubernetes API server
+      --stderrthreshold value          logs at or above this threshold go to stderr (default 2)
+      --token string                   Bearer token for authentication to the API server
+      --user string                    The name of the kubeconfig user to use
+      --username string                Username for basic authentication to the API server
+  -v, --v value                        log level for V logs
+      --vmodule value                  comma-separated list of pattern=N settings for file-filtered logging
 ```
 
-### SEE ALSO
 
-* [kubectl](/docs/user-guide/kubectl/kubectl/)	 - kubectl controls the Kubernetes cluster manager
-* [kubectl config current-context](/docs/user-guide/kubectl/kubectl_config_current-context/)	 - Displays the current-context
-* [kubectl config set](/docs/user-guide/kubectl/kubectl_config_set/)	 - Sets an individual value in a kubeconfig file
-* [kubectl config set-cluster](/docs/user-guide/kubectl/kubectl_config_set-cluster/)	 - Sets a cluster entry in kubeconfig
-* [kubectl config set-context](/docs/user-guide/kubectl/kubectl_config_set-context/)	 - Sets a context entry in kubeconfig
-* [kubectl config set-credentials](/docs/user-guide/kubectl/kubectl_config_set-credentials/)	 - Sets a user entry in kubeconfig
-* [kubectl config unset](/docs/user-guide/kubectl/kubectl_config_unset/)	 - Unsets an individual value in a kubeconfig file
-* [kubectl config use-context](/docs/user-guide/kubectl/kubectl_config_use-context/)	 - Sets the current-context in a kubeconfig file
-* [kubectl config view](/docs/user-guide/kubectl/kubectl_config_view/)
-	 - Displays merged kubeconfig settings or a specified kubeconfig file.
 
-###### Auto generated by spf13/cobra on 2-Mar-2016
+###### Auto generated by spf13/cobra on 2-Sep-2016
+
+
+
+
+
+<!-- BEGIN MUNGE: GENERATED_ANALYTICS -->
+[![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/docs/user-guide/kubectl/kubectl_config.md?pixel)]()
+<!-- END MUNGE: GENERATED_ANALYTICS -->

@@ -1,4 +1,10 @@
 ---
+assignees:
+- brendandburns
+- jbeda
+- mikedanese
+- thockin
+
 ---
 
 
@@ -19,7 +25,8 @@ If you want to use custom binaries or pure open source Kubernetes, please contin
 1. Install `gcloud` as necessary. `gcloud` can be installed as a part of the [Google Cloud SDK](https://cloud.google.com/sdk/).
 1. Enable the [Compute Engine Instance Group Manager API](https://developers.google.com/console/help/new/#activatingapis) in the [Google Cloud developers console](https://console.developers.google.com).
 1. Make sure that gcloud is set to use the Google Cloud Platform project you want. You can check the current project using `gcloud config list project` and change it via `gcloud config set project <project-id>`.
-1. Make sure you have credentials for GCloud by running ` gcloud auth login`.
+1. Make sure you have credentials for GCloud by running `gcloud auth login`.
+1. (Optional)  In order to make API calls against GCE, you must also run `gcloud auth application-default login`.
 1. Make sure you can start up a GCE VM from the command line.  At least make sure you can do the [Create an instance](https://cloud.google.com/compute/docs/instances/#startinstancegcloud) part of the GCE Quickstart.
 1. Make sure you can ssh into the VM without interactive prompts.  See the [Log in to the instance](https://cloud.google.com/compute/docs/instances/#sshing) part of the GCE Quickstart.
 
@@ -40,7 +47,7 @@ wget -q -O - https://get.k8s.io | bash
 
 Once this command completes, you will have a master VM and four worker VMs, running as a Kubernetes cluster.
 
-By default, some containers will already be running on your cluster. Containers like `kibana` and `elasticsearch` provide [logging](/docs/getting-started-guides/logging), while `heapster` provides [monitoring](http://releases.k8s.io/{{page.githubbranch}}/cluster/addons/cluster-monitoring/README.md) services.
+By default, some containers will already be running on your cluster. Containers like `fluentd` provide [logging](/docs/getting-started-guides/logging), while `heapster` provides [monitoring](http://releases.k8s.io/{{page.githubbranch}}/cluster/addons/cluster-monitoring/README.md) services.
 
 The script run by the commands above creates a cluster with the name/prefix "kubernetes". It defines one specific cluster config, so you can't run it more than once.
 
@@ -54,14 +61,14 @@ cluster/kube-up.sh
 If you want more than one cluster running in your project, want to use a different name, or want a different number of worker nodes, see the `<kubernetes>/cluster/gce/config-default.sh` file for more fine-grained configuration before you start up your cluster.
 
 If you run into trouble, please see the section on [troubleshooting](/docs/getting-started-guides/gce/#troubleshooting), post to the
-[google-containers group](https://groups.google.com/forum/#!forum/google-containers), or come ask questions on [Slack](/docs/troubleshooting/#slack).
+[kubernetes-users group](https://groups.google.com/forum/#!forum/kubernetes-users), or come ask questions on [Slack](/docs/troubleshooting/#slack).
 
 The next few steps will show you:
 
-1. how to set up the command line client on your workstation to manage the cluster
-1. examples of how to use the cluster
-1. how to delete the cluster
-1. how to start clusters with non-default options (like larger clusters)
+1. How to set up the command line client on your workstation to manage the cluster
+1. Examples of how to use the cluster
+1. How to delete the cluster
+1. How to start clusters with non-default options (like larger clusters)
 
 ### Installing the Kubernetes command line tools on your workstation
 
@@ -89,17 +96,29 @@ potential issues with client/server version skew.
 
 You may find it useful to enable `kubectl` bash completion:
 
-```
-$ source ./contrib/completions/bash/kubectl
-```
+* If you're using kubectl with Kubernetes version 1.2 or earlier, you can source the kubectl completion script as follows:<br>
+  ```
+  $ source ./contrib/completions/bash/kubectl
+  ```
 
-**Note**: This will last for the duration of your bash session. If you want to make this permanent you need to add this line in your bash profile.
+* If you're using kubectl with Kubernetes version 1.3, use the `kubectl completion` command as follows:<br>
+  ```
+  $ source <(kubectl completion bash)
+  ```
 
-Alternatively, on most linux distributions you can also move the completions file to your bash_completions.d like this:
+**Note**: The above commands will last for the duration of your bash session. If you want to make this permanent you need to add corresponding command in your bash profile.
 
-```
-$ cp ./contrib/completions/bash/kubectl /etc/bash_completion.d/
-```
+Alternatively, on most linux distributions you can also add a completions file to your bash_completions.d as follows:
+
+* For kubectl with Kubernetes v1.2 or earlier:<br>
+  ```
+  $ cp ./contrib/completions/bash/kubectl /etc/bash_completion.d/
+  ```
+
+* For kubectl with Kubernetes v1.3:<br>
+  ```
+  $ kubectl completion bash | sudo tee /etc/bash_completion.d/kubectl
+  ```
 
 but then you have to update it when you update kubectl.
 
@@ -213,3 +232,17 @@ field values:
 
 * Source Ranges: `10.0.0.0/8`
 * Allowed Protocols and Port: `tcp:1-65535;udp:1-65535;icmp`
+
+## Support Level
+
+
+IaaS Provider        | Config. Mgmt | OS     | Networking  | Docs                                              | Conforms | Support Level
+-------------------- | ------------ | ------ | ----------  | ---------------------------------------------     | ---------| ----------------------------
+GCE                  | Saltstack    | Debian | GCE         | [docs](/docs/getting-started-guides/gce)                                    |   | Project
+
+For support level information on all solutions, see the [Table of solutions](/docs/getting-started-guides/#table-of-solutions) chart.
+
+## Further reading
+
+Please see the [Kubernetes docs](/docs/) for more details on administering
+and using a Kubernetes cluster.

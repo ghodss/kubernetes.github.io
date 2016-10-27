@@ -1,4 +1,8 @@
 ---
+assignees:
+- erictune
+- thockin
+
 ---
 
 Each container in a pod has its own image.  Currently, the only type of image supported is a [Docker Image](https://docs.docker.com/userguide/dockerimages/).
@@ -21,6 +25,8 @@ your image.
 If you did not specify tag of your image, it will be assumed as `:latest`, with
 pull image policy of `Always` correspondingly.
 
+Note that you should avoid using `:latest` tag, see [Best Practices for Configuration](/docs/user-guide/config-best-practices/#container-images) for more information.
+
 ## Using a Private Registry
 
 Private registries may require keys to read images from them.
@@ -30,6 +36,9 @@ Credentials can be provided in several ways:
     - Per-cluster
     - automatically configured on Google Compute Engine or Google Container Engine
     - all pods can read the project's private registry
+  - Using AWS EC2 Container Registry (ECR)
+    - use IAM roles and policies to control access to ECR repositories
+    - automatically refreshes ECR login credentials
   - Configuring Nodes to Authenticate to a Private Registry
     - all pods can read any configured private registries
     - requires node configuration by cluster administrator
@@ -58,7 +67,7 @@ so it can pull from the project's GCR, but not push.
 ### Using AWS EC2 Container Registry
 
 Kubernetes has native support for the [AWS EC2 Container
-Registry](https://aws.amazon.com/ecr/), when nodes are AWS instances.
+Registry](https://aws.amazon.com/ecr/), when nodes are AWS EC2 instances.
 
 Simply use the full image name (e.g. `ACCOUNT.dkr.ecr.REGION.amazonaws.com/imagename:tag`)
 in the Pod definition.
@@ -66,14 +75,38 @@ in the Pod definition.
 All users of the cluster who can create pods will be able to run pods that use any of the
 images in the ECR registry.
 
-The kubelet will fetch and periodically refresh ECR credentials.  It needs the
-`ecr:GetAuthorizationToken` permission to do this.
+The kubelet will fetch and periodically refresh ECR credentials.  It needs the following permissions to do this:
 
+- `ecr:GetAuthorizationToken` 
+- `ecr:BatchCheckLayerAvailability`
+- `ecr:GetDownloadUrlForLayer`
+- `ecr:GetRepositoryPolicy`
+- `ecr:DescribeRepositories`
+- `ecr:ListImages`
+- `ecr:BatchGetImage`
+
+Requirements:
+
+- You must be using kubelet version `v1.2.0` or newer.  (e.g. run `/usr/bin/kubelet --version=true`).
+- Your nodes must be in the same region as the registry you are using
+- ECR must be offered in your region
+
+Troubleshooting:
+
+- Verify all requirements above.
+- Get $REGION (e.g. `us-west-2`) credentials on your workstation. SSH into the host and run Docker manually with those creds. Does it work?
+- Verify kubelet is running with `--cloud-provider=aws`.
+- Check kubelet logs (e.g. `journalctl -t kubelet`) for log lines like:
+  - `plugins.go:56] Registering credential provider: aws-ecr-key`
+  - `provider.go:91] Refreshing cache for provider: *aws_credentials.ecrProvider`
 
 ### Configuring Nodes to Authenticate to a Private Repository
 
 **Note:** if you are running on Google Container Engine (GKE), there will already be a `.dockercfg` on each node
 with credentials for Google Container Registry.  You cannot use this approach.
+
+**Note:** if you are running on AWS EC2 and are using the EC2 Container Registry (ECR), the kubelet on each node will
+manage and update the ECR login credentials. You cannot use this approach.
 
 **Note:** this approach is suitable if you can control node configuration.  It
 will not work reliably on GCE, and any other cloud provider that does automatic
@@ -85,12 +118,12 @@ in the `$HOME` of user `root` on a kubelet, then docker will use it.
 Here are the recommended steps to configuring your nodes to use a private registry.  In this
 example, run these on your desktop/laptop:
 
-   1. run `docker login [server]` for each set of credentials you want to use.  This updates `$HOME/.docker/config.json`.
-   1. view `$HOME/.docker/config.json` in an editor to ensure it contains just the credentials you want to use.
-   1. get a list of your nodes, for example:
+   1. Run `docker login [server]` for each set of credentials you want to use.  This updates `$HOME/.docker/config.json`.
+   1. View `$HOME/.docker/config.json` in an editor to ensure it contains just the credentials you want to use.
+   1. Get a list of your nodes, for example:
       - if you want the names: `nodes=$(kubectl get nodes -o jsonpath='{range.items[*].metadata}{.name} {end}')`
       - if you want to get the IPs: `nodes=$(kubectl get nodes -o jsonpath='{range .items[*].status.addresses[?(@.type=="ExternalIP")]}{.address} {end}')`
-   1. copy your local `.docker/config.json` to the home directory of root on each node.
+   1. Copy your local `.docker/config.json` to the home directory of root on each node.
       - for example: `for n in $nodes; do scp ~/.docker/config.json root@$n:/root/.docker/config.json; done`
 
 Verify by creating a pod that uses a private image, e.g.:

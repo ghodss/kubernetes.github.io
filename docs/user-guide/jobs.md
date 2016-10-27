@@ -1,4 +1,8 @@
 ---
+assignees:
+- erictune
+- soltysh
+
 ---
 
 * TOC
@@ -38,11 +42,11 @@ $ kubectl describe jobs/pi
 Name:		pi
 Namespace:	default
 Image(s):	perl
-Selector:	app in (pi)
+Selector:       controller-uid=b1db589a-2c8d-11e6-b324-0209dc45a495
 Parallelism:	1
 Completions:	1
-Start Time:	Mon, 11 Jan 2016 15:35:52 -0800
-Labels:		app=pi
+Start Time:     Tue, 07 Jun 2016 10:56:16 +0200
+Labels:         controller-uid=b1db589a-2c8d-11e6-b324-0209dc45a495,job-name=pi
 Pods Statuses:	0 Running / 1 Succeeded / 0 Failed
 No volumes.
 Events:
@@ -56,7 +60,7 @@ To view completed pods of a job, use `kubectl get pods --show-all`.  The `--show
 To list all the pods that belong to job in a machine readable form, you can use a command like this:
 
 ```shell
-$ pods=$(kubectl get pods --selector=app=pi --output=jsonpath={.items..metadata.name})
+$ pods=$(kubectl get pods --selector=job-name=pi --output=jsonpath={.items..metadata.name})
 echo $pods
 pi-aiw0a
 ```
@@ -153,7 +157,7 @@ parallelism, for a variety or reasons:
   remaining completions.   Higher values of `.spec.parallelism` are effectively ignored.
 - For work queue jobs, no new pods are started after any pod has succeeded -- remaining pods are allowed to complete, however.
 - If the controller has not had time to react.
-- If the controller failed to create pods for any reason (lack of ResourceQuota, lack of permission, etc),
+- If the controller failed to create pods for any reason (lack of ResourceQuota, lack of permission, etc.),
   then there may be fewer pods than requested.
 - The controller may throttle new pod creation due to excessive previous pod failures in the same Job.
 - When a pod is gracefully shutdown, it make take time to stop.
@@ -163,7 +167,7 @@ parallelism, for a variety or reasons:
 A Container in a Pod may fail for a number of reasons, such as because the process in it exited with
 a non-zero exit code, or the Container was killed for exceeding a memory limit, etc.  If this
 happens, and the `.spec.template.containers[].restartPolicy = "OnFailure"`, then the Pod stays
-on the node, but the Container is re-run.  Therefore, your program needs to handle the the case when it is
+on the node, but the Container is re-run.  Therefore, your program needs to handle the case when it is
 restarted locally, or else specify `.spec.template.containers[].restartPolicy = "Never"`.
 See [pods-states](/docs/user-guide/pod-states) for more information on `restartPolicy`.
 
@@ -181,6 +185,45 @@ sometimes be started twice.
 If you do specify `.spec.parallelism` and `.spec.completions` both greater than 1, then there may be
 multiple pods running at once.  Therefore, your pods must also be tolerant of concurrency.
 
+## Job Termination and Cleanup
+
+When a Job completes, no more Pods are created, but the Pods are not deleted either.  Since they are terminated,
+they don't show up with `kubectl get pods`, but they will show up with `kubectl get pods -a`.  Keeping them around
+allows you to still view the logs of completed pods to check for errors, warnings, or other diagnostic output.
+The job object also remains after it is completed so that you can view its status.  It is up to the user to delete
+old jobs after noting their status.  Delete the job with `kubectl` (e.g. `kubectl delete jobs/pi` or `kubectl delete -f ./job.yaml`).  When you delete the job using `kubectl`, all the pods it created are deleted too.
+
+If a Job's pods are failing repeatedly, the Job will keep creating new pods forever, by default.
+Retrying forever can be a useful pattern.  If an external dependency of the Job's
+pods is missing (for example an input file on a networked storage volume is not present), then the
+Job will keep trying Pods, and when you later resolve the external dependency (for example, creating
+the missing file) the Job will then complete without any further action.
+
+However, if you prefer not to retry forever, you can set a deadline on the job.  Do this by setting the
+`spec.activeDeadlineSeconds` field of the job to a number of seconds.  The job will have status with
+`reason: DeadlineExceeded`.  No more pods will be created, and existing pods will be deleted.
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi-with-timeout
+spec:
+  activeDeadlineSeconds: 100
+  template:
+    metadata:
+      name: pi
+    spec:
+      containers:
+      - name: pi
+        image: perl
+        command: ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+      restartPolicy: Never
+```
+
+Note that both the Job Spec and the Pod Template Spec within the Job have a field with the same name.
+Set the one on the Job.
+
 ## Job Patterns
 
 The Job object can be used to support reliable parallel execution of Pods.  The Job object is not
@@ -195,11 +238,11 @@ considering one set of work items that the user wants to manage together &mdash;
 There are several different patterns for parallel computation, each with strengths and weaknesses.
 The tradeoffs are:
 
-- One Job object for each work item, vs a single Job object for all work items.  The latter is
+- One Job object for each work item, vs. a single Job object for all work items.  The latter is
   better for large numbers of work items.  The former creates some overhead for the user and for the
   system to manage large numbers of Job objects.  Also, with the latter, the resource usage of the job
   (number of concurrently running pods) can be easily adjusted using the `kubectl scale` command.
-- Number of pods created equals number of work items, vs each pod can process multiple work items.
+- Number of pods created equals number of work items, vs. each pod can process multiple work items.
   The former typically requires less modification to existing code and containers.  The latter
   is better for large numbers of work items, for similar reasons to the previous bullet.
 - Several approaches use a work queue.  This requires running a queue service,
@@ -210,12 +253,12 @@ The tradeoffs are:
 The tradeoffs are summarized here, with columns 2 to 4 corresponding to the above tradeoffs.
 The pattern names are also links to examples and more detailed description.
 
-|                            Pattern                                         | Single Job object | Fewer pods than work items? | Use app unmodified? |  Works in Kube 1.1? |
-| -------------------------------------------------------------------------- |:-----------------:|:---------------------------:|:-------------------:|:-------------------:|
-| [Job Template Expansion](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/job/expansions/README.md)          |                   |                             |          ✓          |          ✓          |
-| [Queue with Pod Per Work Item](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/job/work-queue-1/README.md)  |         ✓         |                             |      sometimes      |          ✓          |
-| [Queue with Variable Pod Count](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/job/work-queue-2/README.md) |                   |         ✓         |             ✓               |                     |          ✓          |
-| Single Job with Static Work Assignment                                     |         ✓         |                             |          ✓          |                     |
+|                            Pattern                                   | Single Job object | Fewer pods than work items? | Use app unmodified? |  Works in Kube 1.1? |
+| -------------------------------------------------------------------- |:-----------------:|:---------------------------:|:-------------------:|:-------------------:|
+| [Job Template Expansion](/docs/user-guide/jobs/expansions)            |                   |                             |          ✓          |          ✓          |
+| [Queue with Pod Per Work Item](/docs/user-guide/jobs/work-queue-1/)   |         ✓         |                             |      sometimes      |          ✓          |
+| [Queue with Variable Pod Count](/docs/user-guide/jobs/work-queue-2/)  |         ✓         |             ✓               |                     |          ✓          |
+| Single Job with Static Work Assignment                               |         ✓         |                             |          ✓          |                     |
 
 When you specify completions with `.spec.completions`, each Pod created by the Job controller
 has an identical [`spec`](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/docs/devel/api-conventions.md#spec-and-status).  This means that
@@ -226,12 +269,12 @@ are different ways to arrange for pods to work on different things.
 This table shows the required settings for `.spec.parallelism` and `.spec.completions` for each of the patterns.
 Here, `W` is the number of work items.
 
-|                             Pattern                                        | `.spec.completions` |  `.spec.parallelism` |
-| -------------------------------------------------------------------------- |:-------------------:|:--------------------:|
-| [Job Template Expansion](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/job/expansions/README.md)          |          1          |     should be 1      |
-| [Queue with Pod Per Work Item](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/job/work-queue-1/README.md)  |          W          |        any           |
-| [Queue with Variable Pod Count](https://github.com/kubernetes/kubernetes/tree/{{page.githubbranch}}/examples/job/work-queue-2/README.md) |          1          |        any           |
-| Single Job with Static Work Assignment                                     |          W          |        any           |
+|                             Pattern                                  | `.spec.completions` |  `.spec.parallelism` |
+| -------------------------------------------------------------------- |:-------------------:|:--------------------:|
+| [Job Template Expansion](/docs/user-guide/jobs/expansions/)           |          1          |     should be 1      |
+| [Queue with Pod Per Work Item](/docs/user-guide/jobs/work-queue-1/)   |          W          |        any           |
+| [Queue with Variable Pod Count](/docs/user-guide/jobs/work-queue-2/)  |          1          |        any           |
+| Single Job with Static Work Assignment                               |          W          |        any           |
 
 
 ## Advanced Usage
@@ -331,6 +374,6 @@ driver, and then cleans up.
 An advantage of this approach is that the overall process gets the completion guarantee of a Job
 object, but complete control over what pods are created and how work is assigned to them.
 
-## Future work
+## Scheduled Jobs
 
-Support for creating Jobs at specified times/dates (i.e. cron) is expected in [1.3](https://github.com/kubernetes/kubernetes/pull/11980).
+Support for creating Jobs at specified times/dates (i.e. cron) is available in Kubernetes [1.4](https://github.com/kubernetes/kubernetes/pull/11980). More information is available in the [scheduled job documents](http://kubernetes.io/docs/user-guide/scheduled-jobs/)
